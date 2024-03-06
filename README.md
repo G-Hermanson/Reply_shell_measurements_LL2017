@@ -1,6 +1,6 @@
-# Data and annotated R scripts associated with Evers _et al._ ([_link_](paste link))
+# Data and annotated R scripts associated with Evers _et al._ (link)
 
-Code to read modified turtle shell measurements data from Licthig & Lucas ([_2017_] (https://doi.org/10.1016/j.palwor.2017.02.001)) and perform analyses.
+Code to read modified turtle shell measurements data from Licthig & Lucas ([_2017_](https://doi.org/10.1016/j.palwor.2017.02.001)) and perform analyses.
 
 This repository includes:
 
