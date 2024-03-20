@@ -2,6 +2,8 @@
 
 ### This figure includes data points with associated species numbers
 
+#### For a searchable PDF with the species numbers, refer to [here](https://github.com/G-Hermanson/Reply_shell_measurements_LL2017/blob/main/data/Supplementary_Figure/Lichtig_and_Lucas_data_plot_supplementary_version.pdf)
+
 
 ![image](https://github.com/G-Hermanson/Reply_shell_measurements_LL2017/blob/main/data/Supplementary_Figure/Lichtig_and_Lucas_data_plot_supplementary_version.png)
 
