@@ -4,8 +4,8 @@ Code to read modified turtle shell measurements data from Licthig & Lucas ([_201
 
 This repository includes:
 
-- Spreadsheet (in _".csv"_ format) conatining the dataset of Licthig & Lucas paper in addition to novel measurements
+- Spreadsheet (in _.csv_ format) conatining the dataset of Licthig & Lucas paper in addition to novel measurements
 
-- R scripts and phylogenetic tree file used to run the analyses
+- ```R``` scripts and phylogenetic tree file used to run the analyses
 
-- Supplementary Figure with data points labelled for each species (corresponding to Figure 1 in the main text)
+- Supplementary Figure (in _.pdf_ and _.png_ formats) with data points labelled for each species (corresponding to Figure 1 in the main text)
