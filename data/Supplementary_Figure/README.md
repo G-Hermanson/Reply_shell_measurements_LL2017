@@ -1,4 +1,5 @@
 ## Supplementary figure
+- This folder contains the supplementary figure to the main text. It is available in _.pdf_ and _.csv_ formats.
 
 ### This figure includes data points with associated species numbers
 
