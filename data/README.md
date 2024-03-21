@@ -11,4 +11,4 @@ This folder contains:
 
 - _Thomson100_fixed.tre_ : posterior sample of 100 dated trees from Thomson et al. ([_2021_](https://doi.org/10.1073/pnas.2012215118)), and used as the phylogenetic input for the pFDA
 
-- _Supplementary_Figure_ : this folder contains the Supplementary Figure 1 (in _.pdf_ and _.png_ formats), which corresponds to Figure 1 in the main text with all data points labelled for each species
+- _Supplementary_Figure_ : folder containing a ```Markdown``` file that shows the Supplementary Figure 1 (which corresponds to Figure 1 in the main text), but also the figure in _.pdf_ and _.png_ formats. In this plot, data points are labelled as numbers corresponding to different species
