@@ -154,6 +154,7 @@ rownames(data_pfda) <- data_pfda$species
 
 data_pfda <- data_pfda[complete.cases(data_pfda),]
 
+
 #colour schemes for points and within-point texts
 ecology_col <- c( "dodgerblue3"  , "#D4145A", "tan")
 num_col <- c("white" , "black" , "black")
@@ -256,11 +257,14 @@ for ( i in 1:length(thomson_trees)){
 class(trees.new) <- "multiPhylo"
 
 #which tip labels are actually in the data frame
-
 extant_doming_data <- data_pfda[rownames(data_pfda) %in% trees.new[[1]]$tip.label ,]
 extinct_doming_data <- data_pfda[!rownames(data_pfda) %in% rownames(extant_doming_data) & data_pfda$ecologies=="fossil" ,]
+
 #For pfda, we only consider the values of the AMNH speciemn of Basilemys variolosa (AMNH 5448), as it appears less dorsoventrally flattened
 extinct_doming_data['Basilemys_variolosa',2:4] <- fossil_measurements['Basilemys_variolosa_AMNH_5448',2:4]
+
+#Not include 'Basilemys sp' for further pfda analysis
+extinct_doming_data <- subset(extinct_doming_data,species!='Basilemys_sp')
 
 #add fossil tips to Thomson trees
 
@@ -422,12 +426,8 @@ overall_sucess <- summary( unlist(lapply ( pFDA.doming,
                            function(x) as.numeric(attributes(print(x$confusion))$error) )))
 
 overall_sucess <- 1-overall_sucess[c(1,3,6)]
+  names(overall_sucess) <- rev(names(overall_sucess))
 overall_sucess
-
-
-lapply ( sort(rownames(extinct_doming_data)) , 
-         function(sp) quantile( unlist(lapply ( doming_predictions, function(x) x[sp,1] )),probs=c(0.05,0.95)) )
-
 
 
 #####
@@ -518,5 +518,194 @@ overall_sucess <- summary( unlist(lapply ( pFDA.sagittal,
                                            function(x) as.numeric(attributes(print(x$confusion))$error) )))
 
 overall_sucess <- 1-overall_sucess[c(1,3,6)]
+  names(overall_sucess) <- rev(names(overall_sucess))
 overall_sucess
+
+
+#Post-review
+#Running analyses without 'weird' (many air quotes here) taxa such as Malacochersus, Homopus boulengeri and Terrapene coahuila
+
+to_drop <- c("Malacochersus_tornieri",'Homopus_boulengeri','Terrapene_coahuila')
+
+#pFDA with 100 iterations (coronal doming- this study)
+
+reps =  length(scaled_trees_doming)
+pFDA.doming_withoutOutliers <- list()
+lambda.doming_withoutOutliers <- list()
+
+for ( i in 1:reps){
+  
+  doming_data.temp <- data_pfda[scaled_trees_doming[[i]]$tip.label,]
+    doming_data.temp <- doming_data.temp[!rownames(doming_data.temp) %in% to_drop,]
+  XA.temp <- doming_data.temp[,c(2,3)] 
+  treA.temp <- keep.tip(scaled_trees_doming[[i]],rownames(doming_data.temp))
+  #if(!is.binary.tree(treA)) treA <- multi2di(treA, random = TRUE) 
+  #is.ultrametric(treA)
+  
+  ddA.temp <- XA.temp[treA.temp$tip.label,]
+  taxaA.temp <- rownames(ddA.temp)
+  gA.temp <- as.factor(doming_data.temp$ecologies)
+  
+  testtaxa.temp <- rownames(ddA.temp[gA.temp=="fossil",])
+  testtaxan.temp <- row(ddA.temp)[gA.temp=="fossil",1]
+  trainingtaxa.temp <- rownames(ddA.temp[-testtaxan.temp,])
+  X.temp <- XA.temp[-testtaxan.temp,]
+  dd.temp <- ddA.temp[-testtaxan.temp,]
+  g.temp <- gA.temp[-testtaxan.temp]
+  g.temp <- droplevels(g.temp)
+  tre.temp <- drop.tip(treA.temp, testtaxa.temp) 
+  
+  #lambda
+  ol1.temp <- optLambda(X.temp,g.temp,tre.temp)
+  lambda.temp <- ol1.temp$optlambda[1,1]
+  
+  lambda.doming_withoutOutliers[[i]] <- lambda.temp
+  
+  #pfda
+  optl.temp <- ol1.temp$optlambda[1,1]
+  pFDA.temp <- phylo.fda.pred(XA.temp,gA.temp,taxaA.temp,
+                              treA.temp,
+                              testtaxan.temp,
+                              val=optl.temp,eqprior = T)
+  
+  pFDA.doming_withoutOutliers[[i]] <- pFDA.temp
+  
+  setTxtProgressBar(txtProgressBar(0,reps,style = 3),i)
+  
+}
+
+
+#Predictions
+doming_predictions <- lapply(pFDA.doming_withoutOutliers, 
+                             function(x) predict(x, newdata=x$DATAtest,
+                                                 type="posterior"))
+doming_predictions <- lapply ( doming_predictions , 
+                               function(x) {rownames(x) <- testtaxa.temp ; x})
+
+#Predicted medians
+doming_predictions_median <- round( rbind( apply( do.call(rbind, lapply ( doming_predictions ,  function(x) x[1,] )) , 2 , function(x) summary(x)[c(1,3,6)] ) , 
+                                           apply( do.call(rbind, lapply ( doming_predictions ,  function(x) x[2,] )) , 2 ,function(x) summary(x)[c(1,3,6)]),
+                                           apply( do.call(rbind, lapply ( doming_predictions ,  function(x) x[3,] )) , 2 ,function(x) summary(x)[c(1,3,6)]),
+                                           apply( do.call(rbind, lapply ( doming_predictions ,  function(x) x[4,] )) , 2 ,function(x) summary(x)[c(1,3,6)]),
+                                           apply( do.call(rbind, lapply ( doming_predictions ,  function(x) x[5,] )) , 2 ,function(x) summary(x)[c(1,3,6)])) , 3)
+
+rownames(doming_predictions_median) <- paste0(rep(sort(rownames(extinct_doming_data)),each=3) ,'_', c('min','median','max'))
+doming_predictions_median
+
+# number of trees in which each taxon was predicted each ecology
+
+sapply(1:nrow(extinct_doming_data) , 
+       function(sp) table(unlist(lapply ( pFDA.doming_withoutOutliers , function(x) x$testprediction[sp,]))))
+
+##success rates for extant
+doming_predictions_extant <- lapply ( pFDA.doming_withoutOutliers , function(x) predict(x, type="class"))
+doming_predictions_extant <- lapply(doming_predictions_extant , function(x){names(x) <- trainingtaxa.temp; x})
+
+# % correct "aquatic" classifications
+summary(unlist(lapply ( doming_predictions_extant ,
+                        function(x) mean(rownames(dd.temp)[which(doming_data.temp$ecologies=="aquatic")] %in% names(x)[which(x=="aquatic")])  )))[c(1,3,6)]
+
+# % correct "terrestrial" classifications
+summary(unlist(lapply ( doming_predictions_extant ,
+                        function(x) mean(rownames(dd.temp)[which(doming_data.temp$ecologies=="terrestrial")] %in% names(x)[which(x=="terrestrial")])  )))[c(1,3,6)]
+
+
+overall_sucess <- summary( unlist(lapply ( pFDA.doming_withoutOutliers, 
+                                           function(x) as.numeric(attributes(print(x$confusion))$error) )))
+
+overall_sucess <- 1-overall_sucess[c(1,3,6)]
+overall_sucess
+
+
+
+
+#pFDA with 100 iterations (sagittal doming- original study)
+
+reps =  length(scaled_trees_doming)
+pFDA.sagittal_withoutOutliers <- list()
+lambda.sagittal_withoutOutliers <- list()
+
+for ( i in 1:reps){
+  
+  doming_data.temp <- data_pfda[scaled_trees_doming[[i]]$tip.label,]
+    doming_data.temp <- doming_data.temp[!rownames(doming_data.temp) %in% to_drop,]
+  XA.temp <- doming_data.temp[,c(2,4)] 
+  treA.temp <- keep.tip(scaled_trees_doming[[i]],rownames(doming_data.temp))
+  #if(!is.binary.tree(treA)) treA <- multi2di(treA, random = TRUE) 
+  #is.ultrametric(treA)
+  
+  ddA.temp <- XA.temp[treA.temp$tip.label,]
+  taxaA.temp <- rownames(ddA.temp)
+  gA.temp <- as.factor(doming_data.temp$ecologies)
+  
+  testtaxa.temp <- rownames(ddA.temp[gA.temp=="fossil",])
+  testtaxan.temp <- row(ddA.temp)[gA.temp=="fossil",1]
+  trainingtaxa.temp <- rownames(ddA.temp[-testtaxan.temp,])
+  X.temp <- XA.temp[-testtaxan.temp,]
+  dd.temp <- ddA.temp[-testtaxan.temp,]
+  g.temp <- gA.temp[-testtaxan.temp]
+  g.temp <- droplevels(g.temp)
+  tre.temp <- drop.tip(treA.temp, testtaxa.temp) 
+  
+  #lambda
+  ol1.temp <- optLambda(X.temp,g.temp,tre.temp)
+  lambda.temp <- ol1.temp$optlambda[1,1]
+  
+  lambda.sagittal_withoutOutliers[[i]] <- lambda.temp
+  
+  #pfda
+  optl.temp <- ol1.temp$optlambda[1,1]
+  pFDA.temp <- phylo.fda.pred(XA.temp,gA.temp,taxaA.temp,
+                              treA.temp,
+                              testtaxan.temp,
+                              val=optl.temp,eqprior = T)
+  
+  pFDA.sagittal_withoutOutliers[[i]] <- pFDA.temp
+  
+  setTxtProgressBar(txtProgressBar(0,reps,style = 3),i)
+  
+}
+
+
+#Predictions
+sagittal_predictions <- lapply(pFDA.sagittal_withoutOutliers, 
+                               function(x) predict(x, newdata=x$DATAtest,
+                                                   type="posterior"))
+sagittal_predictions <- lapply ( sagittal_predictions , 
+                                 function(x) {rownames(x) <- testtaxa.temp ; x})
+
+#Predicted medians
+sagittal_predictions_median <- round( rbind( apply( do.call(rbind, lapply ( sagittal_predictions ,  function(x) x[1,] )) , 2 , function(x) summary(x)[c(1,3,6)] ) , 
+                                             apply( do.call(rbind, lapply ( sagittal_predictions ,  function(x) x[2,] )) , 2 ,function(x) summary(x)[c(1,3,6)]),
+                                             apply( do.call(rbind, lapply ( sagittal_predictions ,  function(x) x[3,] )) , 2 ,function(x) summary(x)[c(1,3,6)]),
+                                             apply( do.call(rbind, lapply ( sagittal_predictions ,  function(x) x[4,] )) , 2 ,function(x) summary(x)[c(1,3,6)]),
+                                             apply( do.call(rbind, lapply ( sagittal_predictions ,  function(x) x[5,] )) , 2 ,function(x) summary(x)[c(1,3,6)])) , 3)
+
+rownames(sagittal_predictions_median) <- paste0(rep(sort(rownames(extinct_doming_data)),each=3) ,'_', c('min','median','max'))
+sagittal_predictions_median
+
+# number of trees in which each taxon was predicted each ecology
+
+sapply(1:nrow(extinct_doming_data) , 
+       function(sp) table(unlist(lapply ( pFDA.sagittal_withoutOutliers , function(x) x$testprediction[sp,]))))
+
+##success rates for extant
+sagittal_predictions_extant <- lapply ( pFDA.sagittal_withoutOutliers , function(x) predict(x, type="class"))
+sagittal_predictions_extant <- lapply(sagittal_predictions_extant , function(x){names(x) <- trainingtaxa.temp; x})
+
+# % correct "aquatic" classifications
+summary(unlist(lapply ( sagittal_predictions_extant ,
+                        function(x) mean(rownames(dd.temp)[which(doming_data.temp$ecologies=="aquatic")] %in% names(x)[which(x=="aquatic")])  )))[c(1,3,6)]
+
+# % correct "terrestrial" classifications
+summary(unlist(lapply ( sagittal_predictions_extant ,
+                        function(x) mean(rownames(dd.temp)[which(doming_data.temp$ecologies=="terrestrial")] %in% names(x)[which(x=="terrestrial")])  )))[c(1,3,6)]
+
+
+overall_sucess <- summary( unlist(lapply ( pFDA.sagittal_withoutOutliers, 
+                                           function(x) as.numeric(attributes(print(x$confusion))$error) )))
+
+overall_sucess <- 1-overall_sucess[c(1,3,6)]
+overall_sucess
+
 
