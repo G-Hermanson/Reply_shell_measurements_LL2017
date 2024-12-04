@@ -8,4 +8,4 @@ This repository includes:
 
 - ```R``` scripts and phylogenetic tree file used to run the analyses
 
-- Supplementary Figure (in _.pdf_ format) with data points labelled for each species (corresponding to Figure 1 in the main text)
+- Supplementary Figures (in _.pdf_ and _.png_ formats) with data points labelled for each species
